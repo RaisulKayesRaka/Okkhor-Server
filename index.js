@@ -4,11 +4,14 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger-output.json");
 
 app.use(cors());
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 const port = process.env.PORT || 5000;
-const uri = process.env.MONGO_URI;
+const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -26,7 +29,7 @@ async function run() {
     // await client.connect();
     // await client.db("admin").command({ ping: 1 });
     console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
+      "Pinged your deployment. You successfully connected to MongoDB!",
     );
     const database = client.db("OkkhorDB");
     const usersCollection = database.collection("users");
@@ -130,7 +133,7 @@ async function run() {
         const updateDoc = { $set: { role: "moderator" } };
         const result = await usersCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -143,7 +146,7 @@ async function run() {
         const updateDoc = { $set: { role: "admin" } };
         const result = await usersCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -156,7 +159,7 @@ async function run() {
         const updateDoc = { $set: { role: "user" } };
         const result = await usersCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.post("/blogs", verifyToken, async (req, res) => {
@@ -181,34 +184,29 @@ async function run() {
       res.send(result);
     });
 
-    app.get(
-      "/queued-blogs",
-      verifyToken,
-      verifyModerator,
-      async (req, res) => {
-        const result = await blogsCollection
-          .aggregate([
-            {
-              $addFields: {
-                statusOrder: {
-                  $switch: {
-                    branches: [
-                      { case: { $eq: ["$status", "Pending"] }, then: 0 },
-                      { case: { $eq: ["$status", "Accepted"] }, then: 1 },
-                      { case: { $eq: ["$status", "Rejected"] }, then: 2 },
-                    ],
-                    default: 3,
-                  },
+    app.get("/queued-blogs", verifyToken, verifyModerator, async (req, res) => {
+      const result = await blogsCollection
+        .aggregate([
+          {
+            $addFields: {
+              statusOrder: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: ["$status", "Pending"] }, then: 0 },
+                    { case: { $eq: ["$status", "Accepted"] }, then: 1 },
+                    { case: { $eq: ["$status", "Rejected"] }, then: 2 },
+                  ],
+                  default: 3,
                 },
               },
             },
-            { $sort: { statusOrder: 1, date: -1 } },
-            { $project: { statusOrder: 0 } },
-          ])
-          .toArray();
-        res.send(result);
-      }
-    );
+          },
+          { $sort: { statusOrder: 1, date: -1 } },
+          { $project: { statusOrder: 0 } },
+        ])
+        .toArray();
+      res.send(result);
+    });
 
     app.get("/accepted-blogs", async (req, res) => {
       const email = req?.query?.email;
@@ -263,7 +261,7 @@ async function run() {
           .sort({ date: -1 })
           .toArray();
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -276,7 +274,7 @@ async function run() {
         const updateDoc = { $set: { isReported: false } };
         const result = await blogsCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch("/blogs/make-reported/:id", verifyToken, async (req, res) => {
@@ -297,7 +295,7 @@ async function run() {
         const updateDoc = { $set: { type: "Featured", status: "Accepted" } };
         const result = await blogsCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -310,7 +308,7 @@ async function run() {
         const updateDoc = { $set: { type: "Normal" } };
         const result = await blogsCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -323,7 +321,7 @@ async function run() {
         const updateDoc = { $set: { status: "Accepted" } };
         const result = await blogsCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.patch(
@@ -336,7 +334,7 @@ async function run() {
         const updateDoc = { $set: { status: "Rejected", type: "Normal" } };
         const result = await blogsCollection.updateOne(filter, updateDoc);
         res.send(result);
-      }
+      },
     );
 
     app.get("/blogs/is-upvoted/:id", async (req, res) => {
@@ -369,7 +367,7 @@ async function run() {
 
       const result = await blogsCollection.updateOne(
         { _id: new ObjectId(id) },
-        updateDoc
+        updateDoc,
       );
 
       res.send(result);
@@ -405,7 +403,7 @@ async function run() {
 
       const result = await blogsCollection.updateOne(
         { _id: new ObjectId(id) },
-        updateDoc
+        updateDoc,
       );
 
       res.send(result);
@@ -443,11 +441,7 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDoc = { $set: blog };
-      const result = await blogsCollection.updateOne(
-        query,
-        updateDoc,
-        options
-      );
+      const result = await blogsCollection.updateOne(query, updateDoc, options);
       res.send(result);
     });
 
