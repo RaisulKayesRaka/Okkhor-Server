@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+require("express-async-errors");
 const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -493,6 +494,15 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).send({ 
+    message: "Internal Server Error", 
+    error: err.message 
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
