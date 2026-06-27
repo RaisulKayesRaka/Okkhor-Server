@@ -68,7 +68,7 @@ const getAcceptedBlogs = async (req, res) => {
   let query = { status: "Accepted" };
 
   if (search) {
-    query.blogTags = { $regex: search, $options: "i" };
+    query.blogName = { $regex: search, $options: "i" };
   }
 
   if (email) {
@@ -76,7 +76,9 @@ const getAcceptedBlogs = async (req, res) => {
     if (user) query.ownerId = user._id;
   }
 
-  const sortOption = sort === "newest" ? { date: -1 } : { date: 1 };
+  let sortOption = { date: -1 };
+  if (sort === "oldest") sortOption = { date: 1 };
+  if (sort === "popular") sortOption = { views: -1, date: -1 };
 
   const result = await Blog.find(query)
     .sort(sortOption)
@@ -255,7 +257,7 @@ const getBlogsCount = async (req, res) => {
   
   let query = {};
   if (status) query.status = status;
-  if (search) query.blogTags = { $regex: search, $options: "i" };
+  if (search) query.blogName = { $regex: search, $options: "i" };
 
   const count = await Blog.countDocuments(query);
   res.send({ count });
@@ -271,6 +273,7 @@ const getAuthorAnalytics = async (req, res) => {
   const totalBlogs = blogs.length;
   const totalUpvotes = blogs.reduce((sum, blog) => sum + (blog.upvotes || 0), 0);
   const totalDownvotes = blogs.reduce((sum, blog) => sum + (blog.downvotes || 0), 0);
+  const totalViews = blogs.reduce((sum, blog) => sum + (blog.views || 0), 0);
   
   const statusCounts = blogs.reduce((acc, blog) => {
     const status = blog.status || "Pending";
@@ -278,7 +281,13 @@ const getAuthorAnalytics = async (req, res) => {
     return acc;
   }, {});
 
-  res.send({ totalBlogs, totalUpvotes, totalDownvotes, statusCounts });
+  res.send({ totalBlogs, totalUpvotes, totalDownvotes, totalViews, statusCounts });
+};
+
+const viewBlog = async (req, res) => {
+  const id = req?.params?.id;
+  const result = await Blog.updateOne({ _id: id }, { $inc: { views: 1 } });
+  res.send(result);
 };
 
 module.exports = {
@@ -304,4 +313,5 @@ module.exports = {
   deleteBlog,
   getBlogsCount,
   getAuthorAnalytics,
+  viewBlog,
 };

@@ -5,7 +5,7 @@ const { verifyToken } = require("../middlewares/authMiddleware");
 
 // Mount at / in index.js
 router.post("/reviews", verifyToken, reviewController.createReview);
-router.get("/reviews/:id", verifyToken, reviewController.getReviewsByBlogId);
+router.get("/reviews/:id", reviewController.getReviewsByBlogId);
 router.delete("/reviews/:id", verifyToken, reviewController.deleteReview);
 router.patch("/reviews/:id", verifyToken, reviewController.updateReview);
 

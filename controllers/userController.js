@@ -1,4 +1,7 @@
 const User = require("../models/User");
+const Blog = require("../models/Blog");
+const Review = require("../models/Review");
+const Vote = require("../models/Vote");
 const { addLog } = require("./logController");
 
 const createUser = async (req, res) => {
@@ -24,6 +27,12 @@ const getUserByEmail = async (req, res) => {
   const email = req?.params?.email;
   const result = await User.findOne({ email });
   res.send(result);
+};
+
+const checkEmail = async (req, res) => {
+  const email = req?.params?.email;
+  const result = await User.findOne({ email });
+  res.send({ exists: !!result });
 };
 
 const makeModerator = async (req, res) => {
@@ -53,11 +62,56 @@ const makeUser = async (req, res) => {
   res.send(result);
 };
 
+const updateUser = async (req, res) => {
+  const email = req?.params?.email;
+  const { name, photoUrl } = req.body;
+  
+  // Ensure the user can only update their own account
+  if (req?.decoded?.email !== email) {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
+  const result = await User.updateOne(
+    { email },
+    { $set: { name, photoUrl } }
+  );
+  res.send(result);
+};
+
+const deleteUser = async (req, res) => {
+  const email = req?.params?.email;
+  
+  // Ensure the user can only delete their own account
+  if (req?.decoded?.email !== email) {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).send({ message: "User not found" });
+  }
+
+  const userId = user._id;
+
+  // Cascade Deletes
+  await Blog.deleteMany({ ownerId: userId });
+  await Review.deleteMany({ reviewerId: userId });
+  await Vote.deleteMany({ userId: userId });
+
+  const result = await User.deleteOne({ email });
+  await addLog("Delete Account", `User account ${email} was permanently deleted.`, email);
+
+  res.send(result);
+};
+
 module.exports = {
   createUser,
   getAllUsers,
   getUserByEmail,
+  checkEmail,
   makeModerator,
   makeAdmin,
   makeUser,
+  updateUser,
+  deleteUser,
 };

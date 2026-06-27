@@ -15,6 +15,7 @@ router.patch("/blogs/make-featured/:id", verifyToken, verifyModerator, blogContr
 router.patch("/blogs/remove-featured/:id", verifyToken, verifyModerator, blogController.removeFeatured);
 router.patch("/blogs/make-accepted/:id", verifyToken, verifyModerator, blogController.makeAccepted);
 router.patch("/blogs/make-rejected/:id", verifyToken, verifyModerator, blogController.makeRejected);
+router.patch("/blogs/view/:id", blogController.viewBlog);
 
 router.get("/blogs/is-upvoted/:id", blogController.isUpvoted);
 router.put("/blogs/upvote/:id", verifyToken, blogController.upvote);
@@ -26,7 +27,7 @@ router.get("/trending-blogs", blogController.getTrendingBlogs);
 router.get("/blogs-count", blogController.getBlogsCount);
 router.get("/blogs/analytics/:email", verifyToken, blogController.getAuthorAnalytics);
 
-router.get("/blogs/:id", verifyToken, blogController.getBlogById);
+router.get("/blogs/:id", blogController.getBlogById);
 router.put("/blogs/:id", verifyToken, blogController.updateBlog);
 router.delete("/blogs/:id", verifyToken, blogController.deleteBlog);
 

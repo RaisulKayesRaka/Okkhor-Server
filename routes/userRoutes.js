@@ -7,8 +7,11 @@ const { verifyToken, verifyAdmin } = require("../middlewares/authMiddleware");
 router.post("/users", userController.createUser);
 router.get("/users", verifyToken, verifyAdmin, userController.getAllUsers);
 router.get("/users/:email", verifyToken, userController.getUserByEmail);
+router.get("/users/check-email/:email", userController.checkEmail);
 router.patch("/users/make-moderator/:id", verifyToken, verifyAdmin, userController.makeModerator);
 router.patch("/users/make-admin/:id", verifyToken, verifyAdmin, userController.makeAdmin);
 router.patch("/users/make-user/:id", verifyToken, verifyAdmin, userController.makeUser);
+router.patch("/users/:email", verifyToken, userController.updateUser);
+router.delete("/users/:email", verifyToken, userController.deleteUser);
 
 module.exports = router;
