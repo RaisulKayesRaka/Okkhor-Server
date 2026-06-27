@@ -1,39 +1,51 @@
-const { ObjectId } = require("mongodb");
-const { getReviewsCollection } = require("../config/db");
+const Review = require("../models/Review");
+const User = require("../models/User");
 
 const createReview = async (req, res) => {
-  const reviewsCollection = getReviewsCollection();
-  const review = req.body;
-  const result = await reviewsCollection.insertOne(review);
-  res.send(result);
+  const reviewData = req.body;
+  // reviewData might contain reviewerEmail from frontend, convert to reviewerId
+  if (reviewData.reviewerEmail) {
+    const user = await User.findOne({ email: reviewData.reviewerEmail });
+    if (user) {
+      reviewData.reviewerId = user._id;
+    }
+    delete reviewData.reviewerEmail;
+    delete reviewData.reviewerName;
+    delete reviewData.reviewerImage;
+  }
+  
+  const newReview = new Review(reviewData);
+  const result = await newReview.save();
+  res.send({ insertedId: result._id, ...result._doc });
 };
 
 const getReviewsByBlogId = async (req, res) => {
-  const reviewsCollection = getReviewsCollection();
   const id = req?.params?.id;
-  const query = { blogId: id };
-  const result = await reviewsCollection
-    .find(query)
+  const result = await Review.find({ blogId: id })
     .sort({ reviewDate: -1 })
-    .toArray();
-  res.send(result);
+    .populate("reviewerId", "name photoUrl email");
+    
+  // Map populated data back to what frontend expects if needed, or update frontend to use reviewerId.name
+  const formattedResult = result.map(review => ({
+    ...review._doc,
+    reviewerName: review.reviewerId?.name,
+    reviewerImage: review.reviewerId?.photoUrl,
+    reviewerEmail: review.reviewerId?.email,
+  }));
+  
+  res.send(formattedResult);
 };
 
 const deleteReview = async (req, res) => {
-  const reviewsCollection = getReviewsCollection();
   const id = req?.params?.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await reviewsCollection.deleteOne(query);
+  const result = await Review.deleteOne({ _id: id });
   res.send(result);
 };
 
 const updateReview = async (req, res) => {
-  const reviewsCollection = getReviewsCollection();
   const id = req?.params?.id;
   const review = req.body;
-  const query = { _id: new ObjectId(id) };
-  const updateDoc = { $set: review };
-  const result = await reviewsCollection.updateOne(query, updateDoc);
+  const result = await Review.updateOne({ _id: id }, { $set: review });
   res.send(result);
 };
 

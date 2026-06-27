@@ -1,52 +1,64 @@
-const { ObjectId } = require("mongodb");
-const { getBlogsCollection, getUpvotesCollection, getDownvotesCollection } = require("../config/db");
+const Blog = require("../models/Blog");
+const Vote = require("../models/Vote");
+const User = require("../models/User");
 const { addLog } = require("./logController");
 
 const createBlog = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  const blog = req.body;
-  const result = await blogsCollection.insertOne(blog);
-  res.send(result);
+  const blogData = req.body;
+  if (blogData.ownerEmail) {
+    const user = await User.findOne({ email: blogData.ownerEmail });
+    if (user) {
+      blogData.ownerId = user._id;
+    }
+  }
+  
+  if (blogData.blogTags && Array.isArray(blogData.blogTags) && blogData.blogTags.length > 0 && typeof blogData.blogTags[0] === 'object') {
+    blogData.blogTags = blogData.blogTags.map(tag => tag.text);
+  }
+
+  const newBlog = new Blog(blogData);
+  const result = await newBlog.save();
+  res.send({ insertedId: result._id, ...result._doc });
 };
 
 const getAllBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const email = req?.query?.email;
   let query = {};
   if (email) {
-    query = { ...query, ownerEmail: email };
+    const user = await User.findOne({ email });
+    if (user) {
+      query.ownerId = user._id;
+    }
   }
-  const result = await blogsCollection.find(query).sort({ date: -1 }).toArray();
+  const result = await Blog.find(query).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
 const getQueuedBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  const result = await blogsCollection
-    .aggregate([
-      {
-        $addFields: {
-          statusOrder: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$status", "Pending"] }, then: 0 },
-                { case: { $eq: ["$status", "Accepted"] }, then: 1 },
-                { case: { $eq: ["$status", "Rejected"] }, then: 2 },
-              ],
-              default: 3,
-            },
+  const result = await Blog.aggregate([
+    {
+      $addFields: {
+        statusOrder: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$status", "Pending"] }, then: 0 },
+              { case: { $eq: ["$status", "Accepted"] }, then: 1 },
+              { case: { $eq: ["$status", "Rejected"] }, then: 2 },
+            ],
+            default: 3,
           },
         },
       },
-      { $sort: { statusOrder: 1, date: -1 } },
-      { $project: { statusOrder: 0 } },
-    ])
-    .toArray();
+    },
+    { $sort: { statusOrder: 1, date: -1 } },
+    { $project: { statusOrder: 0 } },
+  ]);
+  
+  await Blog.populate(result, { path: "ownerId", select: "name photoUrl email" });
   res.send(result);
 };
 
 const getAcceptedBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const email = req?.query?.email;
   const page = parseInt(req?.query?.page) || 0;
   const size = parseInt(req?.query?.size) || 10;
@@ -56,67 +68,45 @@ const getAcceptedBlogs = async (req, res) => {
   let query = { status: "Accepted" };
 
   if (search) {
-    query.blogTags = {
-      $elemMatch: {
-        text: { $regex: search, $options: "i" },
-      },
-    };
+    query.blogTags = { $regex: search, $options: "i" };
   }
 
   if (email) {
-    query = { ...query, ownerEmail: email };
+    const user = await User.findOne({ email });
+    if (user) query.ownerId = user._id;
   }
 
-  let result = [];
-  if (sort === "newest") {
-    result = await blogsCollection
-      .find(query)
-      .sort({ date: -1 })
-      .skip(page * size)
-      .limit(size)
-      .toArray();
-  } else {
-    result = await blogsCollection
-      .find(query)
-      .sort({ date: 1 })
-      .skip(page * size)
-      .limit(size)
-      .toArray();
-  }
+  const sortOption = sort === "newest" ? { date: -1 } : { date: 1 };
+
+  const result = await Blog.find(query)
+    .sort(sortOption)
+    .skip(page * size)
+    .limit(size)
+    .populate("ownerId", "name photoUrl email");
+    
   res.send(result);
 };
 
 const getReportedBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  let query = { isReported: true };
-  const result = await blogsCollection.find(query).sort({ date: -1 }).toArray();
+  const result = await Blog.find({ isReported: true }).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
 const dismissReport = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { isReported: false } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { isReported: false } });
   res.send(result);
 };
 
 const makeReported = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { isReported: true } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { isReported: true } });
   res.send(result);
 };
 
 const makeFeatured = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { type: "Featured", status: "Accepted" } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { type: "Featured", status: "Accepted" } });
   if (result.modifiedCount > 0) {
     await addLog("Feature Blog", `Blog ${id} was featured`, req?.decoded?.email || "Unknown");
   }
@@ -124,20 +114,14 @@ const makeFeatured = async (req, res) => {
 };
 
 const removeFeatured = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { type: "Normal" } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { type: "Normal" } });
   res.send(result);
 };
 
 const makeAccepted = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { status: "Accepted" } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { status: "Accepted" } });
   if (result.modifiedCount > 0) {
     await addLog("Approve Blog", `Blog ${id} was approved`, req?.decoded?.email || "Unknown");
   }
@@ -145,11 +129,8 @@ const makeAccepted = async (req, res) => {
 };
 
 const makeRejected = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = { $set: { status: "Rejected", type: "Normal" } };
-  const result = await blogsCollection.updateOne(filter, updateDoc);
+  const result = await Blog.updateOne({ _id: id }, { $set: { status: "Rejected", type: "Normal" } });
   if (result.modifiedCount > 0) {
     await addLog("Reject Blog", `Blog ${id} was rejected`, req?.decoded?.email || "Unknown");
   }
@@ -157,143 +138,135 @@ const makeRejected = async (req, res) => {
 };
 
 const isUpvoted = async (req, res) => {
-  const upvotesCollection = getUpvotesCollection();
   const id = req?.params?.id;
   const email = req?.query?.email;
-  const query = { blogId: new ObjectId(id), email: email };
-  const result = await upvotesCollection.findOne(query);
-  res.send(result?._id ? true : false);
+  const user = await User.findOne({ email });
+  if(!user) return res.send(false);
+  
+  const result = await Vote.findOne({ blogId: id, userId: user._id, type: "upvote" });
+  res.send(!!result);
 };
 
 const upvote = async (req, res) => {
-  const upvotesCollection = getUpvotesCollection();
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
   const email = req?.query?.email;
-  const query = { blogId: new ObjectId(id), email };
+  const user = await User.findOne({ email });
+  if(!user) return res.status(400).send({ message: "User not found" });
 
-  const isUpvotedObj = await upvotesCollection.findOne(query);
+  const existingVote = await Vote.findOne({ blogId: id, userId: user._id });
 
-  if (!isUpvotedObj) {
-    await upvotesCollection.insertOne({
-      email,
-      blogId: new ObjectId(id),
-    });
+  if (existingVote) {
+    if (existingVote.type === "upvote") {
+      await Vote.deleteOne({ _id: existingVote._id });
+      await Blog.updateOne({ _id: id }, { $inc: { upvotes: -1 } });
+    } else {
+      await Vote.updateOne({ _id: existingVote._id }, { type: "upvote" });
+      await Blog.updateOne({ _id: id }, { $inc: { upvotes: 1, downvotes: -1 } });
+    }
   } else {
-    await upvotesCollection.deleteOne(query);
+    await Vote.create({ blogId: id, userId: user._id, type: "upvote" });
+    await Blog.updateOne({ _id: id }, { $inc: { upvotes: 1 } });
   }
 
-  const updateDoc = isUpvotedObj
-    ? { $inc: { upvotes: -1 } }
-    : { $inc: { upvotes: 1 } };
-
-  const result = await blogsCollection.updateOne(
-    { _id: new ObjectId(id) },
-    updateDoc
-  );
-
-  res.send(result);
+  res.send({ success: true });
 };
 
 const isDownvoted = async (req, res) => {
-  const downvotesCollection = getDownvotesCollection();
   const id = req?.params?.id;
   const email = req?.query?.email;
-  const query = { blogId: new ObjectId(id), email: email };
-  const result = await downvotesCollection.findOne(query);
-  res.send(result?._id ? true : false);
+  const user = await User.findOne({ email });
+  if(!user) return res.send(false);
+  
+  const result = await Vote.findOne({ blogId: id, userId: user._id, type: "downvote" });
+  res.send(!!result);
 };
 
 const downvote = async (req, res) => {
-  const downvotesCollection = getDownvotesCollection();
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
   const email = req?.query?.email;
-  const query = { blogId: new ObjectId(id), email };
+  const user = await User.findOne({ email });
+  if(!user) return res.status(400).send({ message: "User not found" });
 
-  const isDownvotedObj = await downvotesCollection.findOne(query);
+  const existingVote = await Vote.findOne({ blogId: id, userId: user._id });
 
-  if (!isDownvotedObj) {
-    await downvotesCollection.insertOne({
-      email,
-      blogId: new ObjectId(id),
-    });
+  if (existingVote) {
+    if (existingVote.type === "downvote") {
+      await Vote.deleteOne({ _id: existingVote._id });
+      await Blog.updateOne({ _id: id }, { $inc: { downvotes: -1 } });
+    } else {
+      await Vote.updateOne({ _id: existingVote._id }, { type: "downvote" });
+      await Blog.updateOne({ _id: id }, { $inc: { downvotes: 1, upvotes: -1 } });
+    }
   } else {
-    await downvotesCollection.deleteOne(query);
+    await Vote.create({ blogId: id, userId: user._id, type: "downvote" });
+    await Blog.updateOne({ _id: id }, { $inc: { downvotes: 1 } });
   }
 
-  const updateDoc = isDownvotedObj
-    ? { $inc: { downvotes: -1 } }
-    : { $inc: { downvotes: 1 } };
-
-  const result = await blogsCollection.updateOne(
-    { _id: new ObjectId(id) },
-    updateDoc
-  );
-
-  res.send(result);
+  res.send({ success: true });
 };
 
 const getFeaturedBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  const query = { type: "Featured", status: "Accepted" };
-  const result = await blogsCollection.find(query).sort({ date: -1 }).toArray();
+  const result = await Blog.find({ type: "Featured", status: "Accepted" }).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
 const getTrendingBlogs = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  const query = { status: "Accepted" };
-  const result = await blogsCollection
-    .find(query)
+  const result = await Blog.find({ status: "Accepted" })
     .sort({ upvotes: -1, downvotes: 1 })
     .limit(6)
-    .toArray();
+    .populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
 const getBlogById = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await blogsCollection.findOne(query);
+  const result = await Blog.findOne({ _id: id }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
 const updateBlog = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const blog = req?.body;
-  const query = { _id: new ObjectId(id) };
-  const options = { upsert: true };
-  const updateDoc = { $set: blog };
-  const result = await blogsCollection.updateOne(query, updateDoc, options);
+  const blogData = req?.body;
+  
+  if (blogData.blogTags && Array.isArray(blogData.blogTags) && blogData.blogTags.length > 0 && typeof blogData.blogTags[0] === 'object') {
+    blogData.blogTags = blogData.blogTags.map(tag => tag.text);
+  }
+  
+  const result = await Blog.updateOne({ _id: id }, { $set: blogData }, { upsert: true });
   res.send(result);
 };
 
 const deleteBlog = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const id = req?.params?.id;
-  const query = { _id: new ObjectId(id) };
-  const result = await blogsCollection.deleteOne(query);
+  const result = await Blog.deleteOne({ _id: id });
   if (result.deletedCount > 0) {
     await addLog("Delete Blog", `Blog ${id} was deleted`, req?.decoded?.email || "Unknown");
+    // Also delete associated reviews and votes
+    const Review = require("../models/Review");
+    await Review.deleteMany({ blogId: id });
+    await Vote.deleteMany({ blogId: id });
   }
   res.send(result);
 };
 
 const getBlogsCount = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
-  const count = await blogsCollection.estimatedDocumentCount();
+  const search = req?.query?.search;
+  const status = req?.query?.status;
+  
+  let query = {};
+  if (status) query.status = status;
+  if (search) query.blogTags = { $regex: search, $options: "i" };
+
+  const count = await Blog.countDocuments(query);
   res.send({ count });
 };
 
 const getAuthorAnalytics = async (req, res) => {
-  const blogsCollection = getBlogsCollection();
   const email = req?.params?.email;
-  const query = { ownerEmail: email };
-  
-  const blogs = await blogsCollection.find(query).toArray();
+  const user = await User.findOne({ email });
+  if(!user) return res.status(404).send({ message: "User not found" });
+
+  const blogs = await Blog.find({ ownerId: user._id });
   
   const totalBlogs = blogs.length;
   const totalUpvotes = blogs.reduce((sum, blog) => sum + (blog.upvotes || 0), 0);

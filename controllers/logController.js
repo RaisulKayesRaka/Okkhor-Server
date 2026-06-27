@@ -1,23 +1,29 @@
-const { getLogsCollection } = require("../config/db");
+const Log = require("../models/Log");
+const User = require("../models/User");
 
-const addLog = async (action, details, triggeredBy) => {
+const addLog = async (action, details, triggeredByEmail) => {
   try {
-    const logsCollection = getLogsCollection();
-    const log = {
+    let triggeredBy = null;
+    if (triggeredByEmail && triggeredByEmail !== "Unknown") {
+      const user = await User.findOne({ email: triggeredByEmail });
+      if (user) {
+        triggeredBy = user._id;
+      }
+    }
+    
+    const log = new Log({
       action,
       details,
       triggeredBy,
-      timestamp: new Date(),
-    };
-    await logsCollection.insertOne(log);
+    });
+    await log.save();
   } catch (error) {
     console.error("Failed to add log", error);
   }
 };
 
 const getLogs = async (req, res) => {
-  const logsCollection = getLogsCollection();
-  const result = await logsCollection.find().sort({ timestamp: -1 }).limit(100).toArray();
+  const result = await Log.find().sort({ timestamp: -1 }).limit(100).populate('triggeredBy', 'name email role');
   res.send(result);
 };
 

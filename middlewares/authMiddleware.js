@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { getUsersCollection } = require("../config/db");
+const User = require("../models/User");
 
 const verifyToken = (req, res, next) => {
   if (!req.headers.authorization) {
@@ -17,10 +17,8 @@ const verifyToken = (req, res, next) => {
 };
 
 const verifyAdmin = async (req, res, next) => {
-  const usersCollection = getUsersCollection();
   const email = req?.decoded?.email;
-  const query = { email: email };
-  const user = await usersCollection.findOne(query);
+  const user = await User.findOne({ email });
   const isAdmin = user?.role === "admin";
   if (!isAdmin) {
     return res.status(403).send({ message: "Forbidden" });
@@ -29,10 +27,8 @@ const verifyAdmin = async (req, res, next) => {
 };
 
 const verifyModerator = async (req, res, next) => {
-  const usersCollection = getUsersCollection();
   const email = req?.decoded?.email;
-  const query = { email: email };
-  const user = await usersCollection.findOne(query);
+  const user = await User.findOne({ email });
   const isModerator = user?.role === "moderator";
   const isAdmin = user?.role === "admin";
   if (!isModerator && !isAdmin) {
