@@ -16,6 +16,7 @@ let blogsCollection;
 let reviewsCollection;
 let upvotesCollection;
 let downvotesCollection;
+let logsCollection;
 
 async function connectDB() {
   // await client.connect();
@@ -26,6 +27,7 @@ async function connectDB() {
   reviewsCollection = db.collection("reviews");
   upvotesCollection = db.collection("upvotes");
   downvotesCollection = db.collection("downvotes");
+  logsCollection = db.collection("logs");
 }
 
 module.exports = {
@@ -36,4 +38,5 @@ module.exports = {
   getReviewsCollection: () => reviewsCollection,
   getUpvotesCollection: () => upvotesCollection,
   getDownvotesCollection: () => downvotesCollection,
+  getLogsCollection: () => logsCollection,
 };

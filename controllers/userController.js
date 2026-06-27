@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const { getUsersCollection } = require("../config/db");
+const { addLog } = require("./logController");
 
 const createUser = async (req, res) => {
   const usersCollection = getUsersCollection();
@@ -36,6 +37,9 @@ const makeModerator = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { role: "moderator" } };
   const result = await usersCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Make Moderator", `User ${id} was made moderator`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -45,6 +49,9 @@ const makeAdmin = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { role: "admin" } };
   const result = await usersCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Make Admin", `User ${id} was made admin`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -54,6 +61,9 @@ const makeUser = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { role: "user" } };
   const result = await usersCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Make User", `User ${id} was made user`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 

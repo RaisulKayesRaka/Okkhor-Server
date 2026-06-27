@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const { getBlogsCollection, getUpvotesCollection, getDownvotesCollection } = require("../config/db");
+const { addLog } = require("./logController");
 
 const createBlog = async (req, res) => {
   const blogsCollection = getBlogsCollection();
@@ -116,6 +117,9 @@ const makeFeatured = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { type: "Featured", status: "Accepted" } };
   const result = await blogsCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Feature Blog", `Blog ${id} was featured`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -134,6 +138,9 @@ const makeAccepted = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { status: "Accepted" } };
   const result = await blogsCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Approve Blog", `Blog ${id} was approved`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -143,6 +150,9 @@ const makeRejected = async (req, res) => {
   const filter = { _id: new ObjectId(id) };
   const updateDoc = { $set: { status: "Rejected", type: "Normal" } };
   const result = await blogsCollection.updateOne(filter, updateDoc);
+  if (result.modifiedCount > 0) {
+    await addLog("Reject Blog", `Blog ${id} was rejected`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -266,6 +276,9 @@ const deleteBlog = async (req, res) => {
   const id = req?.params?.id;
   const query = { _id: new ObjectId(id) };
   const result = await blogsCollection.deleteOne(query);
+  if (result.deletedCount > 0) {
+    await addLog("Delete Blog", `Blog ${id} was deleted`, req?.decoded?.email || "Unknown");
+  }
   res.send(result);
 };
 
@@ -273,6 +286,26 @@ const getBlogsCount = async (req, res) => {
   const blogsCollection = getBlogsCollection();
   const count = await blogsCollection.estimatedDocumentCount();
   res.send({ count });
+};
+
+const getAuthorAnalytics = async (req, res) => {
+  const blogsCollection = getBlogsCollection();
+  const email = req?.params?.email;
+  const query = { ownerEmail: email };
+  
+  const blogs = await blogsCollection.find(query).toArray();
+  
+  const totalBlogs = blogs.length;
+  const totalUpvotes = blogs.reduce((sum, blog) => sum + (blog.upvotes || 0), 0);
+  const totalDownvotes = blogs.reduce((sum, blog) => sum + (blog.downvotes || 0), 0);
+  
+  const statusCounts = blogs.reduce((acc, blog) => {
+    const status = blog.status || "Pending";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  res.send({ totalBlogs, totalUpvotes, totalDownvotes, statusCounts });
 };
 
 module.exports = {
@@ -297,4 +330,5 @@ module.exports = {
   updateBlog,
   deleteBlog,
   getBlogsCount,
+  getAuthorAnalytics,
 };

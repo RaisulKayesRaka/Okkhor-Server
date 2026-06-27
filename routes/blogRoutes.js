@@ -24,6 +24,7 @@ router.put("/blogs/downvote/:id", verifyToken, blogController.downvote);
 router.get("/featured-blogs", blogController.getFeaturedBlogs);
 router.get("/trending-blogs", blogController.getTrendingBlogs);
 router.get("/blogs-count", blogController.getBlogsCount);
+router.get("/blogs/analytics/:email", verifyToken, blogController.getAuthorAnalytics);
 
 router.get("/blogs/:id", verifyToken, blogController.getBlogById);
 router.put("/blogs/:id", verifyToken, blogController.updateBlog);

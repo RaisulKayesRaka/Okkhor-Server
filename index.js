@@ -12,6 +12,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const logRoutes = require("./routes/logRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +33,7 @@ async function run() {
     app.use("/", userRoutes);
     app.use("/", blogRoutes);
     app.use("/", reviewRoutes);
+    app.use("/", logRoutes);
 
   } catch (error) {
     console.error("Database connection failed", error);
