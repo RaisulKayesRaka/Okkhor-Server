@@ -23,7 +23,7 @@ const addLog = async (action, details, triggeredByEmail) => {
 };
 
 const getLogs = async (req, res) => {
-  const result = await Log.find().sort({ timestamp: -1 }).limit(100).populate('triggeredBy', 'name email role');
+  const result = await Log.find().sort({ createdAt: -1 }).limit(100).populate('triggeredBy', 'name email role');
   res.send(result);
 };
 

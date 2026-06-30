@@ -30,7 +30,7 @@ const getAllBlogs = async (req, res) => {
       query.ownerId = user._id;
     }
   }
-  const result = await Blog.find(query).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
+  const result = await Blog.find(query).sort({ createdAt: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
@@ -50,7 +50,7 @@ const getQueuedBlogs = async (req, res) => {
         },
       },
     },
-    { $sort: { statusOrder: 1, date: -1 } },
+    { $sort: { statusOrder: 1, createdAt: -1 } },
     { $project: { statusOrder: 0 } },
   ]);
   
@@ -76,9 +76,9 @@ const getAcceptedBlogs = async (req, res) => {
     if (user) query.ownerId = user._id;
   }
 
-  let sortOption = { date: -1 };
-  if (sort === "oldest") sortOption = { date: 1 };
-  if (sort === "popular") sortOption = { views: -1, date: -1 };
+  let sortOption = { createdAt: -1 };
+  if (sort === "oldest") sortOption = { createdAt: 1 };
+  if (sort === "popular") sortOption = { views: -1, createdAt: -1 };
 
   const result = await Blog.find(query)
     .sort(sortOption)
@@ -90,7 +90,7 @@ const getAcceptedBlogs = async (req, res) => {
 };
 
 const getReportedBlogs = async (req, res) => {
-  const result = await Blog.find({ isReported: true }).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
+  const result = await Blog.find({ isReported: true }).sort({ createdAt: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 
@@ -208,7 +208,7 @@ const downvote = async (req, res) => {
 };
 
 const getFeaturedBlogs = async (req, res) => {
-  const result = await Blog.find({ type: "Featured", status: "Accepted" }).sort({ date: -1 }).populate("ownerId", "name photoUrl email");
+  const result = await Blog.find({ type: "Featured", status: "Accepted" }).sort({ createdAt: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
 };
 

@@ -47,14 +47,14 @@ const getSavedBlogs = async (req, res) => {
 
   const savedBlogs = await SavedBlog.find({ userEmail })
     .populate("blogId")
-    .sort({ savedAt: -1 });
+    .sort({ createdAt: -1 });
 
   // Filter out any where blogId is null (in case the blog was deleted)
   const validSavedBlogs = savedBlogs.filter((sb) => sb.blogId != null);
   
   res.send(validSavedBlogs.map(sb => ({
     _id: sb._id,
-    savedAt: sb.savedAt,
+    savedAt: sb.createdAt,
     ...sb.blogId._doc
   })));
 };

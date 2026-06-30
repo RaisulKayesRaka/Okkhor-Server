@@ -22,7 +22,7 @@ const createReview = async (req, res) => {
 const getReviewsByBlogId = async (req, res) => {
   const id = req?.params?.id;
   const result = await Review.find({ blogId: id })
-    .sort({ reviewDate: -1 })
+    .sort({ createdAt: -1 })
     .populate("reviewerId", "name photoUrl email");
     
   // Map populated data back to what frontend expects if needed, or update frontend to use reviewerId.name
