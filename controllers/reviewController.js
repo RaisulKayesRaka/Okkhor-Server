@@ -38,7 +38,27 @@ const getReviewsByBlogId = async (req, res) => {
 
 const deleteReview = async (req, res) => {
   const id = req?.params?.id;
-  const result = await Review.deleteOne({ _id: id });
+  
+  const review = await Review.findById(id);
+  if (!review) {
+    return res.send({ deletedCount: 0 });
+  }
+
+  // Get all reviews for this blog to efficiently find all nested descendants in memory
+  const allReviews = await Review.find({ blogId: review.blogId });
+  const idsToDelete = [id];
+  
+  const findChildren = (parentId) => {
+    const children = allReviews.filter(r => r.parentId?.toString() === parentId.toString());
+    children.forEach(child => {
+      idsToDelete.push(child._id.toString());
+      findChildren(child._id);
+    });
+  };
+  
+  findChildren(id);
+  
+  const result = await Review.deleteMany({ _id: { $in: idsToDelete } });
   res.send(result);
 };
 
