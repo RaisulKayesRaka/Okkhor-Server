@@ -35,6 +35,17 @@ const checkEmail = async (req, res) => {
   res.send({ exists: !!result });
 };
 
+const getPublicUserById = async (req, res) => {
+  const id = req?.params?.id;
+  try {
+    const result = await User.findById(id).select("name email photoUrl createdAt");
+    if (!result) return res.status(404).send({ message: "User not found" });
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Invalid ID" });
+  }
+};
+
 const makeModerator = async (req, res) => {
   const id = req?.params?.id;
   const result = await User.updateOne({ _id: id }, { role: "moderator" });
@@ -109,6 +120,7 @@ module.exports = {
   getAllUsers,
   getUserByEmail,
   checkEmail,
+  getPublicUserById,
   makeModerator,
   makeAdmin,
   makeUser,

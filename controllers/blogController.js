@@ -64,6 +64,7 @@ const getAcceptedBlogs = async (req, res) => {
   const size = parseInt(req?.query?.size) || 10;
   const search = req?.query?.search;
   const sort = req?.query?.sort;
+  const ownerId = req?.query?.ownerId;
 
   let query = { status: "Accepted" };
 
@@ -74,6 +75,10 @@ const getAcceptedBlogs = async (req, res) => {
   if (email) {
     const user = await User.findOne({ email });
     if (user) query.ownerId = user._id;
+  }
+  
+  if (ownerId) {
+    query.ownerId = ownerId;
   }
 
   let sortOption = { createdAt: -1 };

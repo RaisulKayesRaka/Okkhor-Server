@@ -6,6 +6,7 @@ const { verifyToken, verifyAdmin } = require("../middlewares/authMiddleware");
 // Mount at / in index.js
 router.post("/users", userController.createUser);
 router.get("/users", verifyToken, verifyAdmin, userController.getAllUsers);
+router.get("/users/public/:id", userController.getPublicUserById);
 router.get("/users/:email", verifyToken, userController.getUserByEmail);
 router.get("/users/check-email/:email", userController.checkEmail);
 router.patch("/users/make-moderator/:id", verifyToken, verifyAdmin, userController.makeModerator);
