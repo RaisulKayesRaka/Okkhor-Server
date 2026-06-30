@@ -94,6 +94,40 @@ const getAcceptedBlogs = async (req, res) => {
   res.send(result);
 };
 
+const getFollowingBlogs = async (req, res) => {
+  const email = req?.decoded?.email;
+  if (!email) return res.status(401).send({ message: "Unauthorized" });
+
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).send({ message: "User not found" });
+
+  const page = parseInt(req?.query?.page) || 0;
+  const size = parseInt(req?.query?.size) || 10;
+  const search = req?.query?.search;
+  const sort = req?.query?.sort;
+
+  let query = { 
+    status: "Accepted",
+    ownerId: { $in: user.following || [] }
+  };
+
+  if (search) {
+    query.blogName = { $regex: search, $options: "i" };
+  }
+
+  let sortOption = { createdAt: -1 };
+  if (sort === "oldest") sortOption = { createdAt: 1 };
+  if (sort === "popular") sortOption = { views: -1, createdAt: -1 };
+
+  const result = await Blog.find(query)
+    .sort(sortOption)
+    .skip(page * size)
+    .limit(size)
+    .populate("ownerId", "name photoUrl email");
+    
+  res.send(result);
+};
+
 const getReportedBlogs = async (req, res) => {
   const result = await Blog.find({ isReported: true }).sort({ createdAt: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
@@ -259,10 +293,21 @@ const deleteBlog = async (req, res) => {
 const getBlogsCount = async (req, res) => {
   const search = req?.query?.search;
   const status = req?.query?.status;
+  const feedType = req?.query?.feedType;
+  const viewerEmail = req?.query?.viewerEmail;
   
   let query = {};
   if (status) query.status = status;
   if (search) query.blogName = { $regex: search, $options: "i" };
+
+  if (feedType === "following" && viewerEmail) {
+    const user = await User.findOne({ email: viewerEmail });
+    if (user) {
+      query.ownerId = { $in: user.following || [] };
+    } else {
+      return res.send({ count: 0 });
+    }
+  }
 
   const count = await Blog.countDocuments(query);
   res.send({ count });
@@ -286,7 +331,10 @@ const getAuthorAnalytics = async (req, res) => {
     return acc;
   }, {});
 
-  res.send({ totalBlogs, totalUpvotes, totalDownvotes, totalViews, statusCounts });
+  const followersCount = user.followers?.length || 0;
+  const followingCount = user.following?.length || 0;
+
+  res.send({ _id: user._id, totalBlogs, totalUpvotes, totalDownvotes, totalViews, statusCounts, followersCount, followingCount });
 };
 
 const viewBlog = async (req, res) => {
@@ -319,4 +367,5 @@ module.exports = {
   getBlogsCount,
   getAuthorAnalytics,
   viewBlog,
+  getFollowingBlogs,
 };

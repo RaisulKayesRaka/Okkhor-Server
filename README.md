@@ -9,7 +9,8 @@ Okkhor-Server is the central nervous system of the Okkhor ecosystem. It is a RES
 - **RESTful API Architecture:** Clean and organized endpoints for all CRUD operations.
 - **JWT Authentication:** Secure token-based authentication system with expiration and verification.
 - **Role-Based Authorization (RBAC):** Custom server-side middleware to enforce permissions for Users, Moderators, and Admins.
-- **Database Aggregation & Analytics:** Advanced MongoDB queries for trending blogs, search filters, chronological sorting, and author analytics.
+- **Database Aggregation & Analytics:** Advanced MongoDB queries for trending blogs, search filters, chronological sorting, and real-time author analytics.
+- **Following & Feed Engine:** Optimized `$in` array querying to instantly compile personalized blog feeds based on a user's follower graph, while maintaining follower/following sub-documents for fast connection management.
 - **Data Integrity:** Strict validation of incoming requests to prevent unauthorized data modification.
 - **Security Middleware:** CORS configuration and environment-controlled security settings.
 - **API Performance:** Optimized database indexing and efficient handling of high-volume requests (upvotes/downvotes).

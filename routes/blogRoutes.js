@@ -8,6 +8,7 @@ router.post("/blogs", verifyToken, blogController.createBlog);
 router.get("/all-blogs", verifyToken, blogController.getAllBlogs);
 router.get("/queued-blogs", verifyToken, verifyModerator, blogController.getQueuedBlogs);
 router.get("/accepted-blogs", blogController.getAcceptedBlogs);
+router.get("/blogs/following", verifyToken, blogController.getFollowingBlogs);
 router.get("/reported-blogs", verifyToken, verifyModerator, blogController.getReportedBlogs);
 router.patch("/blogs/dismiss-report/:id", verifyToken, verifyModerator, blogController.dismissReport);
 router.patch("/blogs/make-reported/:id", verifyToken, blogController.makeReported);
