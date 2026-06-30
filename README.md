@@ -9,7 +9,7 @@ Okkhor-Server is the central nervous system of the Okkhor ecosystem. It is a RES
 - **RESTful API Architecture:** Clean and organized endpoints for all CRUD operations.
 - **JWT Authentication:** Secure token-based authentication system with expiration and verification.
 - **Role-Based Authorization (RBAC):** Custom server-side middleware to enforce permissions for Users, Moderators, and Admins.
-- **Database Aggregation:** Advanced MongoDB queries for trending blogs, search filters, and chronological sorting.
+- **Database Aggregation & Analytics:** Advanced MongoDB queries for trending blogs, search filters, chronological sorting, and author analytics.
 - **Data Integrity:** Strict validation of incoming requests to prevent unauthorized data modification.
 - **Security Middleware:** CORS configuration and environment-controlled security settings.
 - **API Performance:** Optimized database indexing and efficient handling of high-volume requests (upvotes/downvotes).
@@ -18,8 +18,7 @@ Okkhor-Server is the central nervous system of the Okkhor ecosystem. It is a RES
 
 - **Node.js:** Cross-platform JavaScript runtime for server-side logic.
 - **Express.js:** Minimal web framework for building RESTful APIs.
-- **MongoDB:** Scalable document-oriented NoSQL database.
-- **MongoDB Node.js Driver:** High-performance communication with the database.
+- **MongoDB & Mongoose:** Scalable document-oriented NoSQL database coupled with elegant Object Data Modeling (ODM).
 - **JSON Web Token (JWT):** Stateless authentication and secure authorization.
 - **CORS:** Managing Cross-Origin Resource Sharing for API security.
 - **Dotenv:** Secure management of environment-specific configurations.
@@ -49,7 +48,8 @@ Okkhor-Server requires a MongoDB instance (local or Atlas) to be accessible.
 
    ```env
    PORT=5000
-   MONGO_URI=your_mongodb_connection_string
+   DB_USER=your_mongodb_username
+   DB_PASS=your_mongodb_password
    ACCESS_TOKEN_SECRET=your_jwt_secret_key
    ```
 
