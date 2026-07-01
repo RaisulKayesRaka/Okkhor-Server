@@ -26,25 +26,14 @@ app.get("/", (req, res) => {
   res.send("Okkhor");
 });
 
-async function run() {
-  try {
-    await connectDB();
-
-    // Mount Routes
-    app.use("/", authRoutes);
-    app.use("/", userRoutes);
-    app.use("/", blogRoutes);
-    app.use("/", reviewRoutes);
-    app.use("/", logRoutes);
-    app.use("/", savedBlogRoutes);
-    app.use("/", adminRoutes);
-
-  } catch (error) {
-    console.error("Database connection failed", error);
-  }
-}
-
-run().catch(console.dir);
+// Mount Routes synchronously so they are available immediately
+app.use("/", authRoutes);
+app.use("/", userRoutes);
+app.use("/", blogRoutes);
+app.use("/", reviewRoutes);
+app.use("/", logRoutes);
+app.use("/", savedBlogRoutes);
+app.use("/", adminRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -55,6 +44,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+async function startServer() {
+  try {
+    await connectDB();
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server", error);
+  }
+}
+
+startServer();
+
