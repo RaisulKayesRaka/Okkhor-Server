@@ -18,6 +18,9 @@ const createBlog = async (req, res) => {
 
   const newBlog = new Blog(blogData);
   const result = await newBlog.save();
+  if (blogData.ownerEmail) {
+    await addLog("Create Blog", `You published a new blog: ${blogData.blogName}`, blogData.ownerEmail, 'user');
+  }
   res.send({ insertedId: result._id, ...result._doc });
 };
 
@@ -207,6 +210,7 @@ const upvote = async (req, res) => {
   } else {
     await Vote.create({ blogId: id, userId: user._id, type: "upvote" });
     await Blog.updateOne({ _id: id }, { $inc: { upvotes: 1 } });
+    await addLog("Upvote Blog", `You upvoted a blog`, email, 'user');
   }
 
   res.send({ success: true });
@@ -241,6 +245,7 @@ const downvote = async (req, res) => {
   } else {
     await Vote.create({ blogId: id, userId: user._id, type: "downvote" });
     await Blog.updateOne({ _id: id }, { $inc: { downvotes: 1 } });
+    await addLog("Downvote Blog", `You downvoted a blog`, email, 'user');
   }
 
   res.send({ success: true });
@@ -274,6 +279,9 @@ const updateBlog = async (req, res) => {
   }
   
   const result = await Blog.updateOne({ _id: id }, { $set: blogData }, { upsert: true });
+  if (result.modifiedCount > 0 && req?.decoded?.email) {
+    await addLog("Update Blog", `You updated a blog`, req.decoded.email, 'user');
+  }
   res.send(result);
 };
 

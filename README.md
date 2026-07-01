@@ -11,6 +11,7 @@ Okkhor-Server is the central nervous system of the Okkhor ecosystem. It is a RES
 - **Role-Based Authorization (RBAC):** Custom server-side middleware to enforce permissions for Users, Moderators, and Admins.
 - **Database Aggregation & Analytics:** Advanced MongoDB queries for trending blogs, search filters, chronological sorting, real-time author analytics, and comprehensive admin dashboard statistics.
 - **Following & Feed Engine:** Optimized `$in` array querying to instantly compile personalized blog feeds based on a user's follower graph, while maintaining follower/following sub-documents for fast connection management.
+- **Activity Logging System:** Backend infrastructure to trace user mutations and interactions across the platform.
 - **Nested Commenting System:** Recursive database querying and self-referential schema design supporting infinitely deep threaded replies, complete with recursive hard-deletion algorithms for thread cleanup.
 - **Data Integrity:** Strict validation of incoming requests to prevent unauthorized data modification.
 - **Security Middleware:** CORS configuration and environment-controlled security settings.

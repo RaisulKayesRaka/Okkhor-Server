@@ -16,6 +16,10 @@ const createReview = async (req, res) => {
   
   const newReview = new Review(reviewData);
   const result = await newReview.save();
+  if (req?.decoded?.email) {
+    const { addLog } = require("./logController");
+    await addLog("Comment", `You commented on a blog`, req.decoded.email, 'user');
+  }
   res.send({ insertedId: result._id, ...result._doc });
 };
 
