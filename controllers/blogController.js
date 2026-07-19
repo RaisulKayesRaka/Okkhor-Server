@@ -38,7 +38,23 @@ const getAllBlogs = async (req, res) => {
 };
 
 const getQueuedBlogs = async (req, res) => {
-  const result = await Blog.aggregate([
+  const page = parseInt(req?.query?.page) || 0;
+  const size = parseInt(req?.query?.size) || 10;
+  const search = req?.query?.search;
+  const statusFilter = req?.query?.status;
+
+  let matchStage = {};
+
+  if (search) {
+    matchStage.blogName = { $regex: search, $options: "i" };
+  }
+  
+  if (statusFilter && statusFilter !== "All") {
+    matchStage.status = statusFilter;
+  }
+
+  const pipeline = [
+    { $match: matchStage },
     {
       $addFields: {
         statusOrder: {
@@ -55,10 +71,23 @@ const getQueuedBlogs = async (req, res) => {
     },
     { $sort: { statusOrder: 1, createdAt: -1 } },
     { $project: { statusOrder: 0 } },
+  ];
+
+  const result = await Blog.aggregate([
+    ...pipeline,
+    { $skip: page * size },
+    { $limit: size }
   ]);
+
+  const countResult = await Blog.aggregate([
+    { $match: matchStage },
+    { $count: "totalCount" }
+  ]);
+
+  const totalCount = countResult.length > 0 ? countResult[0].totalCount : 0;
   
   await Blog.populate(result, { path: "ownerId", select: "name photoUrl email" });
-  res.send(result);
+  res.send({ blogs: result, totalCount });
 };
 
 const getAcceptedBlogs = async (req, res) => {
