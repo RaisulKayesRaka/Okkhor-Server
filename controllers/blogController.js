@@ -355,10 +355,50 @@ const getAuthorAnalytics = async (req, res) => {
     return acc;
   }, {});
 
+  // Generate monthly publish data for the last 12 months
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthlyPublishData = [];
+  const now = new Date();
+  
+  // Initialize array with last 12 months
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthlyPublishData.push({
+      name: monthNames[d.getMonth()],
+      monthIndex: d.getMonth(),
+      year: d.getFullYear(),
+      count: 0
+    });
+  }
+
+  // Populate data
+  blogs.forEach(blog => {
+    if (blog.createdAt) {
+      const blogDate = new Date(blog.createdAt);
+      const diffMonths = (now.getFullYear() - blogDate.getFullYear()) * 12 + (now.getMonth() - blogDate.getMonth());
+      
+      if (diffMonths >= 0 && diffMonths < 12) {
+        // It's within the last 12 months, find the index in our array (11 - diffMonths)
+        const index = 11 - diffMonths;
+        monthlyPublishData[index].count += 1;
+      }
+    }
+  });
+
   const followersCount = user.followers?.length || 0;
   const followingCount = user.following?.length || 0;
 
-  res.send({ _id: user._id, totalBlogs, totalUpvotes, totalDownvotes, totalViews, statusCounts, followersCount, followingCount });
+  res.send({ 
+    _id: user._id, 
+    totalBlogs, 
+    totalUpvotes, 
+    totalDownvotes, 
+    totalViews, 
+    statusCounts, 
+    followersCount, 
+    followingCount,
+    monthlyPublishData
+  });
 };
 
 const viewBlog = async (req, res) => {
