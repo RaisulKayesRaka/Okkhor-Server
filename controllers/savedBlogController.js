@@ -2,50 +2,50 @@ const SavedBlog = require("../models/SavedBlog");
 const Blog = require("../models/Blog");
 
 const saveBlog = async (req, res) => {
-  const { userEmail, blogId } = req.body;
-  if (!userEmail || !blogId) {
-    return res.status(400).send({ message: "Missing userEmail or blogId" });
+  const { userId, blogId } = req.body;
+  if (!userId || !blogId) {
+    return res.status(400).send({ message: "Missing userId or blogId" });
   }
 
-  const existingSave = await SavedBlog.findOne({ userEmail, blogId });
+  const existingSave = await SavedBlog.findOne({ userId, blogId });
   if (existingSave) {
     return res.send({ message: "Blog already saved", insertedId: null });
   }
 
-  const newSavedBlog = new SavedBlog({ userEmail, blogId });
+  const newSavedBlog = new SavedBlog({ userId, blogId });
   const result = await newSavedBlog.save();
   res.send({ insertedId: result._id, ...result._doc });
 };
 
 const unsaveBlog = async (req, res) => {
   const { blogId } = req.params;
-  const userEmail = req.query.email;
+  const userId = req.query.userId;
 
-  if (!userEmail || !blogId) {
-    return res.status(400).send({ message: "Missing email or blogId" });
+  if (!userId || !blogId) {
+    return res.status(400).send({ message: "Missing userId or blogId" });
   }
 
-  const result = await SavedBlog.deleteOne({ userEmail, blogId });
+  const result = await SavedBlog.deleteOne({ userId, blogId });
   res.send(result);
 };
 
 const checkSavedStatus = async (req, res) => {
   const { blogId } = req.params;
-  const userEmail = req.query.email;
+  const userId = req.query.userId;
 
-  if (!userEmail) return res.send({ isSaved: false });
+  if (!userId) return res.send({ isSaved: false });
 
-  const existingSave = await SavedBlog.findOne({ userEmail, blogId });
+  const existingSave = await SavedBlog.findOne({ userId, blogId });
   res.send({ isSaved: !!existingSave });
 };
 
 const getSavedBlogs = async (req, res) => {
-  const userEmail = req.query.email;
-  if (!userEmail) {
-    return res.status(400).send({ message: "Email is required" });
+  const userId = req.query.userId;
+  if (!userId) {
+    return res.status(400).send({ message: "userId is required" });
   }
 
-  const savedBlogs = await SavedBlog.find({ userEmail })
+  const savedBlogs = await SavedBlog.find({ userId })
     .populate("blogId")
     .sort({ createdAt: -1 });
 

@@ -3,16 +3,6 @@ const User = require("../models/User");
 
 const createReview = async (req, res) => {
   const reviewData = req.body;
-  // reviewData might contain reviewerEmail from frontend, convert to reviewerId
-  if (reviewData.reviewerEmail) {
-    const user = await User.findOne({ email: reviewData.reviewerEmail });
-    if (user) {
-      reviewData.reviewerId = user._id;
-    }
-    delete reviewData.reviewerEmail;
-    delete reviewData.reviewerName;
-    delete reviewData.reviewerImage;
-  }
   
   const newReview = new Review(reviewData);
   const result = await newReview.save();

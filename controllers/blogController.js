@@ -5,12 +5,6 @@ const { addLog } = require("./logController");
 
 const createBlog = async (req, res) => {
   const blogData = req.body;
-  if (blogData.ownerEmail) {
-    const user = await User.findOne({ email: blogData.ownerEmail });
-    if (user) {
-      blogData.ownerId = user._id;
-    }
-  }
   
   if (blogData.blogTags && Array.isArray(blogData.blogTags) && blogData.blogTags.length > 0 && typeof blogData.blogTags[0] === 'object') {
     blogData.blogTags = blogData.blogTags.map(tag => tag.text);
@@ -18,20 +12,17 @@ const createBlog = async (req, res) => {
 
   const newBlog = new Blog(blogData);
   const result = await newBlog.save();
-  if (blogData.ownerEmail) {
-    await addLog("Create Blog", `You published a new blog: ${blogData.blogName}`, blogData.ownerEmail, 'user');
+  if (req?.decoded?.email) {
+    await addLog("Create Blog", `You published a new blog: ${blogData.blogName}`, req.decoded.email, 'user');
   }
   res.send({ insertedId: result._id, ...result._doc });
 };
 
 const getAllBlogs = async (req, res) => {
-  const email = req?.query?.email;
+  const userId = req?.query?.userId;
   let query = {};
-  if (email) {
-    const user = await User.findOne({ email });
-    if (user) {
-      query.ownerId = user._id;
-    }
+  if (userId) {
+    query.ownerId = userId;
   }
   const result = await Blog.find(query).sort({ createdAt: -1 }).populate("ownerId", "name photoUrl email");
   res.send(result);
@@ -212,21 +203,19 @@ const makeRejected = async (req, res) => {
 
 const isUpvoted = async (req, res) => {
   const id = req?.params?.id;
-  const email = req?.query?.email;
-  const user = await User.findOne({ email });
-  if(!user) return res.send(false);
+  const userId = req?.query?.userId;
+  if (!userId) return res.send(false);
   
-  const result = await Vote.findOne({ blogId: id, userId: user._id, type: "upvote" });
+  const result = await Vote.findOne({ blogId: id, userId: userId, type: "upvote" });
   res.send(!!result);
 };
 
 const upvote = async (req, res) => {
   const id = req?.params?.id;
-  const email = req?.query?.email;
-  const user = await User.findOne({ email });
-  if(!user) return res.status(400).send({ message: "User not found" });
+  const userId = req?.query?.userId;
+  if (!userId) return res.status(400).send({ message: "userId is required" });
 
-  const existingVote = await Vote.findOne({ blogId: id, userId: user._id });
+  const existingVote = await Vote.findOne({ blogId: id, userId: userId });
 
   if (existingVote) {
     if (existingVote.type === "upvote") {
@@ -237,9 +226,9 @@ const upvote = async (req, res) => {
       await Blog.updateOne({ _id: id }, { $inc: { upvotes: 1, downvotes: -1 } });
     }
   } else {
-    await Vote.create({ blogId: id, userId: user._id, type: "upvote" });
+    await Vote.create({ blogId: id, userId: userId, type: "upvote" });
     await Blog.updateOne({ _id: id }, { $inc: { upvotes: 1 } });
-    await addLog("Upvote Blog", `You upvoted a blog`, email, 'user');
+    await addLog("Upvote Blog", `You upvoted a blog`, req?.decoded?.email || 'Unknown', 'user');
   }
 
   res.send({ success: true });
@@ -247,21 +236,19 @@ const upvote = async (req, res) => {
 
 const isDownvoted = async (req, res) => {
   const id = req?.params?.id;
-  const email = req?.query?.email;
-  const user = await User.findOne({ email });
-  if(!user) return res.send(false);
+  const userId = req?.query?.userId;
+  if (!userId) return res.send(false);
   
-  const result = await Vote.findOne({ blogId: id, userId: user._id, type: "downvote" });
+  const result = await Vote.findOne({ blogId: id, userId: userId, type: "downvote" });
   res.send(!!result);
 };
 
 const downvote = async (req, res) => {
   const id = req?.params?.id;
-  const email = req?.query?.email;
-  const user = await User.findOne({ email });
-  if(!user) return res.status(400).send({ message: "User not found" });
+  const userId = req?.query?.userId;
+  if (!userId) return res.status(400).send({ message: "userId is required" });
 
-  const existingVote = await Vote.findOne({ blogId: id, userId: user._id });
+  const existingVote = await Vote.findOne({ blogId: id, userId: userId });
 
   if (existingVote) {
     if (existingVote.type === "downvote") {
@@ -272,9 +259,9 @@ const downvote = async (req, res) => {
       await Blog.updateOne({ _id: id }, { $inc: { downvotes: 1, upvotes: -1 } });
     }
   } else {
-    await Vote.create({ blogId: id, userId: user._id, type: "downvote" });
+    await Vote.create({ blogId: id, userId: userId, type: "downvote" });
     await Blog.updateOne({ _id: id }, { $inc: { downvotes: 1 } });
-    await addLog("Downvote Blog", `You downvoted a blog`, email, 'user');
+    await addLog("Downvote Blog", `You downvoted a blog`, req?.decoded?.email || 'Unknown', 'user');
   }
 
   res.send({ success: true });
